@@ -1,168 +1,1281 @@
+import os
 import tkinter as tk
 from tkinter import messagebox
-import customtkinter as ctk  
-import seguranca  # Importa a lógica separada
 
-# Configuração da UI Moderna
-ctk.set_appearance_mode("System")  
-ctk.set_default_color_theme("blue")  
+import customtkinter as ctk
+
+import seguranca
+import style
+
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("blue")
+
+
+
+# ============================================================
+# CONFIGURAÇÃO DA INTERFACE
+# ============================================================
+
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("blue")
+
 
 class AplicacaoGestor:
+
     def __init__(self, root):
+
         self.root = root
-        self.root.title("GerePass - Painel Seguro")
-        self.root.geometry("520x520")
-        self.root.resizable(False, False)
+
+        self.root.title(
+            "GerePass - Painel Seguro"
+        )
+
+        self.root.geometry(
+            "600x680"
+        )
+
+        self.root.resizable(
+            False,
+            False
+        )
+
+        # Chave atualmente utilizada
         self.chave = None
+
+        # Serviços cujas passwords estão visíveis
+        self.passwords_visiveis = set()
+
         self.criar_ecra_login()
 
+    # ========================================================
+    # LOGIN
+    # ========================================================
+
     def criar_ecra_login(self):
+
         self.limpar_ecra()
-        
-        lbl_titulo = ctk.CTkLabel(self.root, text="GerePass", font=("Segoe UI", 28, "bold"), text_color="#3B82F6")
-        lbl_titulo.pack(pady=(40, 5))
-        
-        lbl_sub = ctk.CTkLabel(self.root, text="Gestor de Palavras-passe Portátil", font=("Segoe UI", 13), text_color="gray")
-        lbl_sub.pack(pady=(0, 30))
-        
-        card = ctk.CTkFrame(self.root, width=400, height=220, corner_radius=15)
-        card.pack(pady=10, padx=20, fill="both", expand=True)
-        card.pack_propagate(False)
-        
-        lbl_info = ctk.CTkLabel(card, text="Introduza a sua Chave Mestra para cifrar os dados:", font=("Segoe UI", 12))
-        lbl_info.pack(pady=(25, 10))
-        
-        self.ent_master = ctk.CTkEntry(card, show="*", placeholder_text="Palavra-passe Mestra", width=280, height=40, corner_radius=8)
-        self.ent_master.pack(pady=10)
+
+        titulo = ctk.CTkLabel(
+            self.root,
+            text="GerePass",
+            font=(
+                "Segoe UI",
+                30,
+                "bold"
+            ),
+            text_color="#3B82F6"
+        )
+
+        titulo.pack(
+            pady=(50, 5)
+        )
+
+        subtitulo = ctk.CTkLabel(
+            self.root,
+            text="Gestor de Palavras-passe Portátil",
+            font=(
+                "Segoe UI",
+                13
+            ),
+            text_color="gray"
+        )
+
+        subtitulo.pack(
+            pady=(0, 30)
+        )
+
+        # ----------------------------------------------------
+        # CARD LOGIN
+        # ----------------------------------------------------
+
+        card = ctk.CTkFrame(
+            self.root,
+            width=450,
+            height=260,
+            corner_radius=15
+        )
+
+        card.pack(
+            padx=30,
+            pady=10
+        )
+
+        card.pack_propagate(
+            False
+        )
+
+        info = ctk.CTkLabel(
+            card,
+            text="Introduza a sua Password Mestra",
+            font=(
+                "Segoe UI",
+                13
+            )
+        )
+
+        info.pack(
+            pady=(30, 10)
+        )
+
+        self.ent_master = ctk.CTkEntry(
+            card,
+            show="*",
+            placeholder_text="Password Mestra",
+            width=320,
+            height=42,
+            corner_radius=8
+        )
+
+        self.ent_master.pack(
+            pady=10
+        )
+
         self.ent_master.focus()
-        
-        btn_login = ctk.CTkButton(card, text="Desbloquear Painel", font=("Segoe UI", 12, "bold"), 
-                                  height=40, width=280, corner_radius=8, fg_color="#10B981", hover_color="#059669",
-                                  command=self.autenticar)
-        btn_login.pack(pady=(15, 20))
+
+        botao_login = ctk.CTkButton(
+            card,
+            text="🔓 Desbloquear Painel",
+            font=(
+                "Segoe UI",
+                12,
+                "bold"
+            ),
+            width=320,
+            height=42,
+            corner_radius=8,
+            fg_color="#10B981",
+            hover_color="#059669",
+            command=self.autenticar
+        )
+
+        botao_login.pack(
+            pady=15
+        )
+
+        # Enter para desbloquear
+        self.ent_master.bind(
+            "<Return>",
+            lambda event: self.autenticar()
+        )
+
+    # ========================================================
+    # AUTENTICAÇÃO
+    # ========================================================
 
     def autenticar(self):
+
         master = self.ent_master.get()
+
         if not master:
-            messagebox.showwarning("Aviso", "A password mestra não pode estar vazia!")
+
+            messagebox.showwarning(
+                "Aviso",
+                "A Password Mestra não pode estar vazia."
+            )
+
             return
-        self.chave = seguranca.gerar_chave(master)
-        seguranca.inicializar_ficheiro(self.chave)
-        if seguranca.ler_dados(self.chave) is False:
-            messagebox.showerror("Erro", "Password Mestra incorreta! Acesso negado.")
+
+        # ----------------------------------------------------
+        # PRIMEIRA EXECUÇÃO
+        # ----------------------------------------------------
+
+        if not os.path.exists(
+            seguranca.FICHEIRO_DADOS
+        ):
+
+            sucesso = (
+                seguranca.inicializar_ficheiro(
+                    master
+                )
+            )
+
+            if not sucesso:
+
+                messagebox.showerror(
+                    "Erro",
+                    "Não foi possível criar o cofre."
+                )
+
+                return
+
+        # ----------------------------------------------------
+        # TENTAR OBTER A CHAVE
+        # ----------------------------------------------------
+
+        self.chave = seguranca.autenticar(
+            master
+        )
+
+        if self.chave is False:
+
+            messagebox.showerror(
+                "Acesso Negado",
+                "Password Mestra incorreta!"
+            )
+
             self.chave = None
-        else:
-            self.criar_painel_principal()
+
+            return
+
+        # ----------------------------------------------------
+        # CONFIRMAR QUE A CHAVE CONSEGUE DESENCRIPTAR
+        # ----------------------------------------------------
+
+        dados = seguranca.ler_dados(
+            self.chave
+        )
+
+        if dados is False:
+
+            messagebox.showerror(
+                "Erro",
+                "Não foi possível desencriptar o cofre."
+            )
+
+            self.chave = None
+
+            return
+
+        # Login efetuado
+        self.criar_painel_principal()
+
+    # ========================================================
+    # PAINEL PRINCIPAL
+    # ========================================================
 
     def criar_painel_principal(self):
-        self.limpar_ecra()
-        
-        tabview = ctk.CTkTabview(self.root, width=480, height=460, corner_radius=12)
-        tabview.pack(pady=10, padx=10, fill="both", expand=True)
-        
-        aba1 = tabview.add("Guardar Password")
-        aba2 = tabview.add("Ver Guardadas")
-        aba3 = tabview.add("Definições")
-        
-        # --- Aba 1: Guardar ---
-        ctk.CTkLabel(aba1, text="Proteger Nova Credencial", font=("Segoe UI", 16, "bold")).pack(pady=(15, 20))
-        self.ent_servico = ctk.CTkEntry(aba1, placeholder_text="Serviço ou Site (ex: GitHub)", width=320, height=35, corner_radius=6)
-        self.ent_servico.pack(pady=8)
-        self.ent_user = ctk.CTkEntry(aba1, placeholder_text="Utilizador ou E-mail", width=320, height=35, corner_radius=6)
-        self.ent_user.pack(pady=8)
-        self.ent_pass = ctk.CTkEntry(aba1, placeholder_text="Palavra-passe do Serviço", width=320, height=35, corner_radius=6)
-        self.ent_pass.pack(pady=8)
-        btn_gravar = ctk.CTkButton(aba1, text="Gravar em Segurança", font=("Segoe UI", 12, "bold"), width=320, height=40, corner_radius=6, fg_color="#3B82F6", hover_color="#2563EB", command=self.gravar_senha)
-        btn_gravar.pack(pady=(25, 10))
-        
-        # --- Aba 2: Visualizar e Eliminar ---
-        ctk.CTkLabel(aba2, text="Credenciais Encriptadas em Disco", font=("Segoe UI", 16, "bold")).pack(pady=(10, 5))
-        self.txt_lista = ctk.CTkTextbox(aba2, width=440, height=180, font=("Consolas", 11), corner_radius=8, border_width=1)
-        self.txt_lista.pack(pady=5)
-        
-        frame_apagar = ctk.CTkFrame(aba2, fg_color="transparent")
-        frame_apagar.pack(pady=10, fill="x", padx=10)
-        
-        self.ent_apagar_servico = ctk.CTkEntry(frame_apagar, placeholder_text="Nome do Serviço a APAGAR", width=240, height=35, corner_radius=6)
-        self.ent_apagar_servico.pack(side="left", padx=(0, 10))
-        
-        btn_apagar = ctk.CTkButton(frame_apagar, text="Apagar", font=("Segoe UI", 11, "bold"), width=100, height=35, corner_radius=6, fg_color="#EF4444", hover_color="#DC2626", command=self.processar_eliminacao)
-        btn_apagar.pack(side="left")
-        
-        btn_atualizar = ctk.CTkButton(aba2, text="Atualizar Lista", font=("Segoe UI", 11, "bold"), width=150, height=35, corner_radius=6, fg_color="gray", hover_color="#4B5563", command=self.atualizar_lista_ecra)
-        btn_atualizar.pack(pady=(5, 0))
-        self.atualizar_lista_ecra()
 
-        # --- Aba 3: Definições ---
-        ctk.CTkLabel(aba3, text="Segurança do Sistema", font=("Segoe UI", 16, "bold")).pack(pady=(15, 20))
-        ctk.CTkLabel(aba3, text="Mudar a Password Mestra do Cofre:", font=("Segoe UI", 12), text_color="gray").pack(pady=5)
-        self.ent_nova_master = ctk.CTkEntry(aba3, show="*", placeholder_text="Nova Password Mestra", width=320, height=35, corner_radius=6)
-        self.ent_nova_master.pack(pady=10)
-        btn_mudar = ctk.CTkButton(aba3, text="Confirmar Nova Chave", font=("Segoe UI", 12, "bold"), width=320, height=40, corner_radius=6, fg_color="#10B981", hover_color="#059669", command=self.processar_mudanca_pass)
-        btn_mudar.pack(pady=20)
+        self.limpar_ecra()
+
+        self.passwords_visiveis.clear()
+
+        # ----------------------------------------------------
+        # TABVIEW
+        # ----------------------------------------------------
+
+        self.tabview = ctk.CTkTabview(
+            self.root,
+            width=570,
+            height=630,
+            corner_radius=12
+        )
+
+        self.tabview.pack(
+            padx=10,
+            pady=10,
+            fill="both",
+            expand=True
+        )
+
+        aba_guardar = self.tabview.add(
+            "Guardar"
+        )
+
+        aba_ver = self.tabview.add(
+            "Ver Guardadas"
+        )
+
+        aba_definicoes = self.tabview.add(
+            "Definições"
+        )
+
+        self.criar_aba_guardar(
+            aba_guardar
+        )
+
+        self.criar_aba_ver(
+            aba_ver
+        )
+
+        self.criar_aba_definicoes(
+            aba_definicoes
+        )
+
+    # ========================================================
+    # ABA GUARDAR
+    # ========================================================
+
+    def criar_aba_guardar(
+        self,
+        aba
+    ):
+
+        titulo = ctk.CTkLabel(
+            aba,
+            text="Proteger Nova Credencial",
+            font=(
+                "Segoe UI",
+                18,
+                "bold"
+            )
+        )
+
+        titulo.pack(
+            pady=(30, 25)
+        )
+
+        # ----------------------------------------------------
+        # SERVIÇO
+        # ----------------------------------------------------
+
+        self.ent_servico = ctk.CTkEntry(
+            aba,
+            placeholder_text="🌐 Serviço ou Site",
+            width=370,
+            height=42,
+            corner_radius=7
+        )
+
+        self.ent_servico.pack(
+            pady=8
+        )
+
+        # ----------------------------------------------------
+        # UTILIZADOR
+        # ----------------------------------------------------
+
+        self.ent_user = ctk.CTkEntry(
+            aba,
+            placeholder_text="👤 Utilizador ou E-mail",
+            width=370,
+            height=42,
+            corner_radius=7
+        )
+
+        self.ent_user.pack(
+            pady=8
+        )
+
+        # ----------------------------------------------------
+        # PASSWORD
+        # ----------------------------------------------------
+
+        self.ent_pass = ctk.CTkEntry(
+            aba,
+            placeholder_text="🔑 Palavra-passe",
+            width=370,
+            height=42,
+            corner_radius=7,
+            show="*"
+        )
+
+        self.ent_pass.pack(
+            pady=8
+        )
+
+        # ----------------------------------------------------
+        # BOTÃO
+        # ----------------------------------------------------
+
+        botao = ctk.CTkButton(
+            aba,
+            text="🔐 Gravar em Segurança",
+            width=370,
+            height=45,
+            corner_radius=7,
+            font=(
+                "Segoe UI",
+                12,
+                "bold"
+            ),
+            fg_color="#3B82F6",
+            hover_color="#2563EB",
+            command=self.gravar_senha
+        )
+
+        botao.pack(
+            pady=(30, 10)
+        )
+
+        # Enter para gravar
+        self.ent_pass.bind(
+            "<Return>",
+            lambda event: self.gravar_senha()
+        )
+
+    # ========================================================
+    # GRAVAR PASSWORD
+    # ========================================================
 
     def gravar_senha(self):
-        servico = self.ent_servico.get().strip()
-        user = self.ent_user.get().strip()
-        senha = self.ent_pass.get().strip()
-        if not servico or not user or not senha:
-            messagebox.showwarning("Aviso", "Preencha todos os campos!")
-            return
-        dados_atuais = seguranca.ler_dados(self.chave)
-        nova_linha = f"{servico}|{user}|{senha}\n"
-        seguranca.gravar_dados(self.chave, dados_atuais + nova_linha)
-        messagebox.showinfo("Sucesso", f"Dados para '{servico}' guardados com sucesso!")
-        self.ent_servico.delete(0, tk.END)
-        self.ent_user.delete(0, tk.END)
-        self.ent_pass.delete(0, tk.END)
-        self.atualizar_lista_ecra()
 
-    def atualizar_lista_ecra(self):
-        self.txt_lista.delete("1.0", tk.END)
-        dados = seguranca.ler_dados(self.chave)
-        if not dados or not dados.strip():
-            self.txt_lista.insert(tk.END, "Nenhuma palavra-passe guardada no cofre encriptado.")
-            return
-        linhas = dados.strip().split("\n")
-        for linha in linhas:
-            if "|" in linha:
-                srv, usr, psw = linha.split("|")
-                self.txt_lista.insert(tk.END, f"📌 [SITE]: {srv}\n👤 [USER]: {usr}\n🔑 [PASS]: {psw}\n" + "—"*35 + "\n")
+        servico = (
+            self.ent_servico
+            .get()
+            .strip()
+        )
 
-    def processar_eliminacao(self):
-        target = self.ent_apagar_servico.get().strip()
-        if not target:
-            messagebox.showwarning("Aviso", "Digite o nome do serviço que pretende apagar!")
+        utilizador = (
+            self.ent_user
+            .get()
+            .strip()
+        )
+
+        password = (
+            self.ent_pass
+            .get()
+            .strip()
+        )
+
+        # ----------------------------------------------------
+        # VALIDAÇÃO
+        # ----------------------------------------------------
+
+        if (
+            not servico
+            or not utilizador
+            or not password
+        ):
+
+            messagebox.showwarning(
+                "Aviso",
+                "Preencha todos os campos."
+            )
+
             return
-        
-        resultado = seguranca.eliminar_credencial(self.chave, target)
-        if resultado is True:
-            messagebox.showinfo("Sucesso", f"O serviço '{target}' foi completamente eliminado sem deixar metadados.")
-            self.ent_apagar_servico.delete(0, tk.END)
-            self.atualizar_lista_ecra()
-        elif resultado == "nao_encontrado":
-            messagebox.showwarning("Aviso", f"Não foi encontrado nenhum serviço com o nome '{target}'.")
+
+        # ----------------------------------------------------
+        # GUARDAR
+        # ----------------------------------------------------
+
+        sucesso = (
+            seguranca.adicionar_credencial(
+                self.chave,
+                servico,
+                utilizador,
+                password
+            )
+        )
+
+        if not sucesso:
+
+            messagebox.showerror(
+                "Erro",
+                "Não foi possível guardar a credencial."
+            )
+
+            return
+
+        messagebox.showinfo(
+            "Sucesso",
+            f"'{servico}' foi guardado com sucesso."
+        )
+
+        # Limpar campos
+        self.ent_servico.delete(
+            0,
+            tk.END
+        )
+
+        self.ent_user.delete(
+            0,
+            tk.END
+        )
+
+        self.ent_pass.delete(
+            0,
+            tk.END
+        )
+
+        # Atualizar lista
+        if hasattr(
+            self,
+            "lista_frame"
+        ):
+
+            self.atualizar_lista()
+
+    # ========================================================
+    # ABA VER GUARDADAS
+    # ========================================================
+
+    def criar_aba_ver(
+        self,
+        aba
+    ):
+
+        titulo = ctk.CTkLabel(
+            aba,
+            text="As Minhas Credenciais",
+            font=(
+                "Segoe UI",
+                18,
+                "bold"
+            )
+        )
+
+        titulo.pack(
+            pady=(10, 5)
+        )
+
+        # ----------------------------------------------------
+        # PESQUISA
+        # ----------------------------------------------------
+
+        self.ent_pesquisa = ctk.CTkEntry(
+            aba,
+            placeholder_text="🔎 Pesquisar por site ou utilizador...",
+            width=480,
+            height=40,
+            corner_radius=7
+        )
+
+        self.ent_pesquisa.pack(
+            pady=(5, 10)
+        )
+
+        # Pesquisa enquanto escreve
+        self.ent_pesquisa.bind(
+            "<KeyRelease>",
+            lambda event: self.pesquisar()
+        )
+
+        # ----------------------------------------------------
+        # FILTROS
+        # ----------------------------------------------------
+
+        filtro_frame = ctk.CTkFrame(
+            aba,
+            fg_color="transparent"
+        )
+
+        filtro_frame.pack(
+            pady=(0, 8)
+        )
+
+        ctk.CTkLabel(
+            filtro_frame,
+            text="Pesquisar em:",
+            font=(
+                "Segoe UI",
+                11
+            )
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        self.filtro = tk.StringVar(
+            value="Tudo"
+        )
+
+        ctk.CTkRadioButton(
+            filtro_frame,
+            text="Tudo",
+            variable=self.filtro,
+            value="Tudo",
+            command=self.pesquisar
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        ctk.CTkRadioButton(
+            filtro_frame,
+            text="Site",
+            variable=self.filtro,
+            value="Site",
+            command=self.pesquisar
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        ctk.CTkRadioButton(
+            filtro_frame,
+            text="Utilizador",
+            variable=self.filtro,
+            value="Utilizador",
+            command=self.pesquisar
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        # ----------------------------------------------------
+        # LISTA SCROLLABLE
+        # ----------------------------------------------------
+
+        self.lista_frame = ctk.CTkScrollableFrame(
+            aba,
+            width=510,
+            height=380,
+            corner_radius=8
+        )
+
+        self.lista_frame.pack(
+            padx=5,
+            pady=5,
+            fill="both",
+            expand=True
+        )
+
+        # ----------------------------------------------------
+        # BOTÕES
+        # ----------------------------------------------------
+
+        botoes = ctk.CTkFrame(
+            aba,
+            fg_color="transparent"
+        )
+
+        botoes.pack(
+            pady=8
+        )
+
+        ctk.CTkButton(
+            botoes,
+            text="↻ Atualizar",
+            width=130,
+            height=35,
+            command=self.atualizar_lista
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        ctk.CTkButton(
+            botoes,
+            text="✕ Limpar Pesquisa",
+            width=150,
+            height=35,
+            fg_color="#6B7280",
+            hover_color="#4B5563",
+            command=self.limpar_pesquisa
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        # Mostrar inicialmente
+        self.atualizar_lista()
+
+    # ========================================================
+    # CRIAR CARTÃO DE CREDENCIAL
+    # ========================================================
+
+    def criar_cartao(
+        self,
+        servico,
+        utilizador,
+        password
+    ):
+
+        cartao = ctk.CTkFrame(
+            self.lista_frame,
+            corner_radius=10,
+            border_width=1
+        )
+
+        cartao.pack(
+            fill="x",
+            padx=5,
+            pady=6
+        )
+
+        # ----------------------------------------------------
+        # SITE
+        # ----------------------------------------------------
+
+        ctk.CTkLabel(
+            cartao,
+            text=f"🌐 {servico}",
+            font=(
+                "Segoe UI",
+                14,
+                "bold"
+            ),
+            anchor="w"
+        ).pack(
+            fill="x",
+            padx=15,
+            pady=(10, 3)
+        )
+
+        # ----------------------------------------------------
+        # UTILIZADOR
+        # ----------------------------------------------------
+
+        ctk.CTkLabel(
+            cartao,
+            text=f"👤 {utilizador}",
+            font=(
+                "Segoe UI",
+                11
+            ),
+            anchor="w"
+        ).pack(
+            fill="x",
+            padx=15,
+            pady=2
+        )
+
+        # ----------------------------------------------------
+        # PASSWORD + BOTÕES
+        # ----------------------------------------------------
+
+        password_frame = ctk.CTkFrame(
+            cartao,
+            fg_color="transparent"
+        )
+
+        password_frame.pack(
+            fill="x",
+            padx=10,
+            pady=(5, 10)
+        )
+
+        password_visivel = (
+            servico in self.passwords_visiveis
+        )
+
+        if password_visivel:
+
+            texto_password = password
+
         else:
-            messagebox.showerror("Erro", "Falha de segurança ao aceder ao ficheiro.")
 
-    def processar_mudanca_pass(self):
-        nova_pass = self.ent_nova_master.get().strip()
-        if not nova_pass:
-            messagebox.showwarning("Aviso", "A nova password não pode estar vazia!")
+            texto_password = "••••••••••••"
+
+        label_password = ctk.CTkLabel(
+            password_frame,
+            text=f"🔑 {texto_password}",
+            font=(
+                "Consolas",
+                11
+            ),
+            anchor="w"
+        )
+
+        label_password.pack(
+            side="left",
+            padx=5
+        )
+
+        # ----------------------------------------------------
+        # MOSTRAR / OCULTAR
+        # ----------------------------------------------------
+
+        def alternar_password():
+
+            if servico in self.passwords_visiveis:
+
+                self.passwords_visiveis.remove(
+                    servico
+                )
+
+            else:
+
+                self.passwords_visiveis.add(
+                    servico
+                )
+
+            self.pesquisar()
+
+        ctk.CTkButton(
+            password_frame,
+            text="👁",
+            width=38,
+            height=30,
+            command=alternar_password
+        ).pack(
+            side="right",
+            padx=3
+        )
+
+        # ----------------------------------------------------
+        # COPIAR
+        # ----------------------------------------------------
+
+        def copiar_password():
+
+            self.root.clipboard_clear()
+
+            self.root.clipboard_append(
+                password
+            )
+
+            self.root.update()
+
+            messagebox.showinfo(
+                "Copiado",
+                "Password copiada para a área de transferência."
+            )
+
+        ctk.CTkButton(
+            password_frame,
+            text="📋",
+            width=38,
+            height=30,
+            fg_color="#10B981",
+            hover_color="#059669",
+            command=copiar_password
+        ).pack(
+            side="right",
+            padx=3
+        )
+
+        # ----------------------------------------------------
+        # APAGAR
+        # ----------------------------------------------------
+
+        def apagar():
+
+            confirmar = messagebox.askyesno(
+                "Confirmar eliminação",
+                f"Tem a certeza que pretende apagar '{servico}'?"
+            )
+
+            if not confirmar:
+                return
+
+            resultado = (
+                seguranca.eliminar_credencial(
+                    self.chave,
+                    servico
+                )
+            )
+
+            if resultado is True:
+
+                self.passwords_visiveis.discard(
+                    servico
+                )
+
+                self.pesquisar()
+
+                messagebox.showinfo(
+                    "Sucesso",
+                    f"'{servico}' foi eliminado."
+                )
+
+            elif resultado == "nao_encontrado":
+
+                messagebox.showwarning(
+                    "Aviso",
+                    "A credencial já não existe."
+                )
+
+            else:
+
+                messagebox.showerror(
+                    "Erro",
+                    "Não foi possível eliminar a credencial."
+                )
+
+        ctk.CTkButton(
+            password_frame,
+            text="🗑",
+            width=38,
+            height=30,
+            fg_color="#EF4444",
+            hover_color="#DC2626",
+            command=apagar
+        ).pack(
+            side="right",
+            padx=3
+        )
+
+    # ========================================================
+    # PESQUISA
+    # ========================================================
+
+    def pesquisar(self):
+
+        # ----------------------------------------------------
+        # LER PESQUISA
+        # ----------------------------------------------------
+
+        pesquisa = (
+            self.ent_pesquisa
+            .get()
+            .strip()
+            .lower()
+        )
+
+        # ----------------------------------------------------
+        # LER COFRE
+        # ----------------------------------------------------
+
+        dados = seguranca.ler_dados(
+            self.chave
+        )
+
+        if dados is False:
+
+            self.mostrar_mensagem_lista(
+                "❌ Erro ao desencriptar o cofre."
+            )
+
             return
-        nova_chave = seguranca.alterar_password_mestra(self.chave, nova_pass)
-        if nova_chave:
-            self.chave = nova_chave
-            messagebox.showinfo("Sucesso", "Chave Mestra alterada!\nO ficheiro foi reencriptado com sucesso.")
-            self.ent_nova_master.delete(0, tk.END)
-        else:
-            messagebox.showerror("Erro", "Falha ao reencriptar os dados.")
 
-    def limpar_ecra(self):
-        for widget in self.root.winfo_children():
+        # ----------------------------------------------------
+        # LIMPAR LISTA
+        # ----------------------------------------------------
+
+        for widget in (
+            self.lista_frame.winfo_children()
+        ):
+
             widget.destroy()
 
+        # ----------------------------------------------------
+        # COFRE VAZIO
+        # ----------------------------------------------------
+
+        if not dados.strip():
+
+            self.mostrar_mensagem_lista(
+                "🔐 Nenhuma credencial guardada."
+            )
+
+            return
+
+        encontrou = False
+
+        filtro = self.filtro.get()
+
+        # ----------------------------------------------------
+        # PERCORRER CREDENCIAIS
+        # ----------------------------------------------------
+
+        for linha in dados.strip().split("\n"):
+
+            if "|" not in linha:
+                continue
+
+            try:
+
+                servico, utilizador, password = (
+                    linha.split("|", 2)
+                )
+
+            except ValueError:
+
+                continue
+
+            servico_lower = servico.lower()
+
+            utilizador_lower = utilizador.lower()
+
+            # ------------------------------------------------
+            # FILTRO
+            # ------------------------------------------------
+
+            if filtro == "Site":
+
+                corresponde = (
+                    pesquisa in servico_lower
+                )
+
+            elif filtro == "Utilizador":
+
+                corresponde = (
+                    pesquisa in utilizador_lower
+                )
+
+            else:
+
+                corresponde = (
+                    pesquisa in servico_lower
+                    or
+                    pesquisa in utilizador_lower
+                )
+
+            if not corresponde:
+                continue
+
+            encontrou = True
+
+            self.criar_cartao(
+                servico,
+                utilizador,
+                password
+            )
+
+        # ----------------------------------------------------
+        # SEM RESULTADOS
+        # ----------------------------------------------------
+
+        if not encontrou:
+
+            if pesquisa:
+
+                texto = (
+                    f"🔍 Nenhum resultado para '{pesquisa}'."
+                )
+
+            else:
+
+                texto = (
+                    "🔐 Nenhuma credencial guardada."
+                )
+
+            self.mostrar_mensagem_lista(
+                texto
+            )
+
+    # ========================================================
+    # MENSAGEM NA LISTA
+    # ========================================================
+
+    def mostrar_mensagem_lista(
+        self,
+        texto
+    ):
+
+        for widget in (
+            self.lista_frame.winfo_children()
+        ):
+
+            widget.destroy()
+
+        mensagem = ctk.CTkLabel(
+            self.lista_frame,
+            text=texto,
+            font=(
+                "Segoe UI",
+                12
+            ),
+            text_color="gray"
+        )
+
+        mensagem.pack(
+            pady=50
+        )
+
+    # ========================================================
+    # ATUALIZAR LISTA
+    # ========================================================
+
+    def atualizar_lista(self):
+
+        if hasattr(
+            self,
+            "ent_pesquisa"
+        ):
+
+            self.ent_pesquisa.delete(
+                0,
+                tk.END
+            )
+
+        if hasattr(
+            self,
+            "filtro"
+        ):
+
+            self.filtro.set(
+                "Tudo"
+            )
+
+        self.pesquisar()
+
+    # ========================================================
+    # LIMPAR PESQUISA
+    # ========================================================
+
+    def limpar_pesquisa(self):
+
+        self.ent_pesquisa.delete(
+            0,
+            tk.END
+        )
+
+        self.filtro.set(
+            "Tudo"
+        )
+
+        self.pesquisar()
+
+    # ========================================================
+    # ABA DEFINIÇÕES
+    # ========================================================
+
+    def criar_aba_definicoes(
+        self,
+        aba
+    ):
+
+        ctk.CTkLabel(
+            aba,
+            text="Segurança do Sistema",
+            font=(
+                "Segoe UI",
+                18,
+                "bold"
+            )
+        ).pack(
+            pady=(35, 20)
+        )
+
+        ctk.CTkLabel(
+            aba,
+            text="Alterar Password Mestra",
+            font=(
+                "Segoe UI",
+                12
+            ),
+            text_color="gray"
+        ).pack(
+            pady=5
+        )
+
+        self.ent_nova_master = ctk.CTkEntry(
+            aba,
+            show="*",
+            placeholder_text="Nova Password Mestra",
+            width=370,
+            height=42,
+            corner_radius=7
+        )
+
+        self.ent_nova_master.pack(
+            pady=10
+        )
+
+        ctk.CTkButton(
+            aba,
+            text="🔐 Alterar Password Mestra",
+            width=370,
+            height=45,
+            corner_radius=7,
+            fg_color="#10B981",
+            hover_color="#059669",
+            font=(
+                "Segoe UI",
+                12,
+                "bold"
+            ),
+            command=self.processar_mudanca_pass
+        ).pack(
+            pady=20
+        )
+
+        # ----------------------------------------------------
+        # INFORMAÇÃO
+        # ----------------------------------------------------
+
+        info = ctk.CTkLabel(
+            aba,
+            text=(
+                "Ao alterar a Password Mestra,\n"
+                "o cofre será reencriptado e será\n"
+                "gerado um novo salt aleatório."
+            ),
+            font=(
+                "Segoe UI",
+                11
+            ),
+            text_color="gray"
+        )
+
+        info.pack(
+            pady=30
+        )
+
+    # ========================================================
+    # ALTERAR PASSWORD MESTRA
+    # ========================================================
+
+    def processar_mudanca_pass(self):
+
+        nova_pass = (
+            self.ent_nova_master
+            .get()
+            .strip()
+        )
+
+        if not nova_pass:
+
+            messagebox.showwarning(
+                "Aviso",
+                "A nova Password Mestra não pode estar vazia."
+            )
+
+            return
+
+        # ----------------------------------------------------
+        # CONFIRMAÇÃO
+        # ----------------------------------------------------
+
+        confirmar = messagebox.askyesno(
+            "Confirmar alteração",
+            (
+                "Tem a certeza que pretende alterar "
+                "a Password Mestra?\n\n"
+                "O cofre será reencriptado com uma "
+                "nova chave e um novo salt."
+            )
+        )
+
+        if not confirmar:
+            return
+
+        # ----------------------------------------------------
+        # ALTERAR
+        # ----------------------------------------------------
+
+        nova_chave = (
+            seguranca.alterar_password_mestra(
+                self.chave,
+                nova_pass
+            )
+        )
+
+        if nova_chave:
+
+            self.chave = nova_chave
+
+            self.ent_nova_master.delete(
+                0,
+                tk.END
+            )
+
+            self.passwords_visiveis.clear()
+
+            messagebox.showinfo(
+                "Sucesso",
+                (
+                    "Password Mestra alterada com sucesso.\n\n"
+                    "O cofre foi reencriptado com um "
+                    "novo salt aleatório."
+                )
+            )
+
+            self.atualizar_lista()
+
+        else:
+
+            messagebox.showerror(
+                "Erro",
+                "Falha ao reencriptar o cofre."
+            )
+
+    # ========================================================
+    # LIMPAR ECRÃ
+    # ========================================================
+
+    def limpar_ecra(self):
+
+        for widget in (
+            self.root.winfo_children()
+        ):
+
+            widget.destroy()
+
+
+# ============================================================
+# INICIAR PROGRAMA
+# ============================================================
+
 if __name__ == "__main__":
+
+    style.aplicar_estilos_globais()
+
     root = ctk.CTk()
+
     app = AplicacaoGestor(root)
+
     root.mainloop()
+

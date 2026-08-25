@@ -1,7 +1,7 @@
-# Ficheiro de base de dados local (CONTEÚDO SENSÍVEL - NUNCA ENVIAR)
+# Ficheiro de base de dados local 
 senhas.enc
 
-# Pastas geradas pelo PyInstaller (Ficheiros temporários e compilados locais)
+# Pastas geradas pelo PyInstaller 
 build/
 dist/
 __pycache__/
