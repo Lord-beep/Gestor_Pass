@@ -1,4 +1,4 @@
-# 🚀 GerePass
+# 🔐 GerePass
 
 O **GerePass** é um gestor de palavras-passe portátil concebido para armazenar e gerir credenciais de forma segura num ficheiro local encriptado. A aplicação conta com uma interface gráfica moderna e garante que os dados sensíveis são apenas descifrados em memória RAM durante a utilização.
 
