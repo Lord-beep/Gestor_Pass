@@ -120,6 +120,13 @@ Utilizador (Password Mestra)
 
 ---
 
+
+## 👤 Autor
+
+**Lord-beep**
+
+---
+
 ## ⭐ Projeto
 
 Se este projeto foi útil para si, considere dar uma estrela no repositório!
